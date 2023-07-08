@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// Options for optimising: pointers, printf over concatenation?, google other options
+// Options for optimising: pointers, printf over concatenation?, google other options 'https://golangdocs.com/techniques-to-maximize-your-go-applications-performance'
 // BENCHMARK first so that have something to write about
 
 type SearchConfig struct {
@@ -38,9 +38,9 @@ func createConfigFile() {
 }
 
 func displayConfigMenu(searchConfig SearchConfig) {
-	fmt.Println("CONFIG MENU")
-	fmt.Println("\nHit words:")
+	fmt.Println("\n\t--- CONFIG MENU ---")
 
+	fmt.Println("\nHit words:")
 	for _, v := range searchConfig.HitWords {
 		fmt.Println("\t" + v)
 	}
@@ -48,6 +48,35 @@ func displayConfigMenu(searchConfig SearchConfig) {
 	fmt.Println("\nExcluded versions:")
 	for _, v := range searchConfig.ExcludedVersion {
 		fmt.Println("\t" + v)
+	}
+}
+
+func getUserSelection() {
+	menuOptions := []string{"\t1. Add hit word",
+		"\t2. Remove hit word",
+		"\t3. Add excluded version",
+		"\t4. Remove excluded version",
+		"\t5. Quit",
+	}
+	fmt.Println("\nWhat would you like to do?")
+	for _, option := range menuOptions {
+		fmt.Println(option)
+	}
+	fmt.Print("\nType the corresponding number and press enter: ")
+
+	var selection int
+	fmt.Scan(&selection)
+
+	if selection > len(menuOptions) || selection == 0 {
+		fmt.Println("\nSorry, I didn't get that...")
+		getUserSelection()
+	}
+
+	switch selection {
+	case 1:
+		fmt.Println("user selected 1")
+	case 2:
+		fmt.Println("user selected 2")
 	}
 }
 
@@ -92,6 +121,7 @@ func main() {
 
 	if *userIsConfiguring {
 		displayConfigMenu(searchConfig)
+		getUserSelection()
 	} else {
 		fmt.Println("Not configuring")
 	}
@@ -115,7 +145,6 @@ func main() {
 	defer closeFile(f)
 
 	readAndPrintFileByLine(f)
-	fmt.Printf("Value: %v. Type: %T\n", f, f)
 
 	// if errors array isn't empty, display lines for each file and prompt user if they want to run tests or abort to fix
 
