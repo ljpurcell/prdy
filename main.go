@@ -10,7 +10,10 @@ import (
 	"strings"
 )
 
-type Config struct {
+// Options for optimising: pointers, printf over concatenation?, google other options
+// BENCHMARK first so that have something to write about
+
+type SearchConfig struct {
 	HitWords        []string
 	ExcludedVersion []string
 }
@@ -28,14 +31,24 @@ func closeFile(file fs.File) {
 }
 
 func createConfigFile() {
-	defaultConfigStruct := Config{[]string{"var_dump", "dd", "console.log"}, []string{"console.log(error)", "console.log(exception)"}}
+	defaultConfigStruct := SearchConfig{[]string{"var_dump", "dd", "console.log"}, []string{"console.log(error)", "console.log(exception)"}}
 	jsonConfigData, err := json.Marshal(defaultConfigStruct)
 	check(err)
 	os.WriteFile(".prdy_config.json", jsonConfigData, 0644)
 }
 
-func displayConfigMenu() {
+func displayConfigMenu(searchConfig SearchConfig) {
+	fmt.Println("CONFIG MENU")
+	fmt.Println("\nHit words:")
 
+	for _, v := range searchConfig.HitWords {
+		fmt.Println("\t" + v)
+	}
+
+	fmt.Println("\nExcluded versions:")
+	for _, v := range searchConfig.ExcludedVersion {
+		fmt.Println("\t" + v)
+	}
 }
 
 func readAndPrintFileByLine(file fs.File) {
@@ -69,14 +82,16 @@ func main() {
 		createConfigFile()
 	}
 
-	fmt.Println("Read config into memory")
+	configJson, err := os.ReadFile(".prdy_config.json")
+	var searchConfig SearchConfig
+	json.Unmarshal(configJson, &searchConfig)
 
 	// Check whether the user is running or configuring the tool
-	configFlagPtr := flag.Bool("config", false, "Bool (default: false). Open the configuration menu instead of immediately running the tool.")
+	userIsConfiguring := flag.Bool("config", false, "Bool (default: false). Open the configuration menu instead of immediately running the tool.")
 	flag.Parse()
 
-	if *configFlagPtr {
-		fmt.Println("configuring")
+	if *userIsConfiguring {
+		displayConfigMenu(searchConfig)
 	} else {
 		fmt.Println("Not configuring")
 	}
