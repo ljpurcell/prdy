@@ -20,6 +20,38 @@ type SearchConfig struct {
 }
 
 /*
+ * PRIMARY FUNCTIONALITY
+ */
+func checkFileForHits(file fs.File) {
+	fileScanner := bufio.NewScanner(file)
+	fileScanner.Split(bufio.ScanLines)
+
+	var outputMap = make(map[string][]string)
+	var outputArray []string
+
+	fileInfo, err := file.Stat()
+	check(err)
+	fileName := fileInfo.Name()
+
+	for i := 1; fileScanner.Scan(); i++ {
+		if strings.Contains(fileScanner.Text(), "#") {
+			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
+			outputArray = append(outputArray, line)
+		}
+	}
+
+	outputMap[fileName] = outputArray
+
+	for i, line := range outputMap[fileName] {
+		if i == 0 {
+			fmt.Printf("\n\t%s\n", fileName)
+		}
+		fmt.Printf(line)
+	}
+
+}
+
+/*
  * CONFIGURATION
  */
 func addNewHitWord(searchConfig *SearchConfig) {
@@ -235,12 +267,14 @@ func check(err error) {
 }
 
 func main() {
+	runTool := true
 
 	if _, err := os.Stat(".prdy_config.json"); err != nil {
 		createConfigFile()
 	}
 
 	configJson, err := os.ReadFile(".prdy_config.json")
+	check(err)
 	var searchConfig SearchConfig
 	json.Unmarshal(configJson, &searchConfig)
 
@@ -249,6 +283,8 @@ func main() {
 	flag.Parse()
 
 	if *userIsConfiguring {
+
+		runTool = false
 		showMenu := true
 
 		for showMenu {
@@ -265,36 +301,33 @@ func main() {
 			case 4:
 				removeExcludedWord(&searchConfig)
 			case 5:
-				runTool(&searchConfig)
+				runTool = true
+				showMenu = false
 			case 6:
 				showMenu = false
 			}
 		}
-	} else {
-		fmt.Println("Not configuring")
 	}
-	// if configuring, display current config and give option to add or remove terms from the 'hit' or 'exclude' lists
-	// Will probably need to create a .prdy_config file in the directory to preseve config overtime
 
-	// For getting the current working directory. Add basic checks and error handling if there isn't a .env file or app folder, ask the user if they are running it from the root
-	// pwd, err := os.Getwd()
-	// fsys := os.DirFS(pwd)
+	if runTool {
+		// For getting the current working directory. Add basic checks and error handling if there isn't a .env file or app folder, ask the user if they are running it from the root
+		// pwd, err := os.Getwd()
+		// fsys := os.DirFS(pwd)
 
-	// For walking the file system from root. Replace anonymous function with one that actually implements desired functionality
-	// fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
-	// 	fmt.Println(path)
-	// 	return nil
-	// })
+		fsys := os.DirFS("/Users/LJPurcell/Code/prdy")
 
-	fsys := os.DirFS("/Users/LJPurcell/Code/prdy")
+		// For walking the file system from root. Replace anonymous function with one that actually implements desired functionality
+		fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
+			f, err := fsys.Open(path)
+			check(err)
+			defer closeFile(f)
+			checkFileForHits(f)
+			return nil
+		})
 
-	f, err := fsys.Open("README.md")
-	check(err)
-	defer closeFile(f)
+		// if errors array isn't empty, display lines for each file and prompt user if they want to run tests or abort to fix
 
-	readAndPrintFileByLine(f)
+		// run tests if errors array is empty
 
-	// if errors array isn't empty, display lines for each file and prompt user if they want to run tests or abort to fix
-
-	// run tests if errors array is empty
+	}
 }
