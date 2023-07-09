@@ -18,16 +18,52 @@ type SearchConfig struct {
 	ExcludedVersion []string
 }
 
-func check(err error) {
-	if err != nil {
-		panic(err)
+/*
+ * CONFIGURATION
+ */
+func actionUserSelection(userSelection int, searchConfig SearchConfig) {
+	defer updateConfigFile(&searchConfig)
+
+	switch userSelection {
+	case 1:
+		addNewHitWord(&searchConfig)
+	case 2:
+		removeHitWord(&searchConfig)
 	}
+
 }
 
-func closeFile(file fs.File) {
-	err := file.Close()
-	fmt.Println("Closed file")
-	check(err)
+func addNewHitWord(searchConfig *SearchConfig) {
+	fmt.Println("\n\t* Adding new Hit Word *")
+	fmt.Println("\nPlease type the word or pattern you want to match on.")
+	fmt.Println("TIP: If you are looking for a function, leave off the parenthesis -- unless you know the exact naming of the argument(s) it has been called with.")
+	fmt.Print("Add hit word: ")
+	var newHitWord string
+	fmt.Scanln(&newHitWord)
+
+	searchConfig.HitWords = append(searchConfig.HitWords, newHitWord)
+
+	fmt.Printf("Added %q\n", newHitWord)
+	displayHitWords(searchConfig, false)
+}
+
+func removeHitWord(searchConfig *SearchConfig) {
+	fmt.Println("\n\t* Remove Hit Word *")
+	fmt.Println("\nPlease type the number of the word you want to remove.")
+	fmt.Println("TIP: If you want to remove mutliple words, type a space seperated list.")
+
+	displayHitWords(searchConfig, true)
+
+	fmt.Print("\nRemove hit word: ")
+	var indexToRemove int
+	fmt.Scanln(&indexToRemove)
+	indexToRemove-- // Menu is 1-based, so need to decrement index
+
+	removedWord := searchConfig.HitWords[indexToRemove]
+	copy(searchConfig.HitWords[indexToRemove:], searchConfig.HitWords[indexToRemove+1:])
+	searchConfig.HitWords = searchConfig.HitWords[:len(searchConfig.HitWords)-1]
+
+	fmt.Printf("Remove %q\n", removedWord)
 }
 
 func createConfigFile() {
@@ -37,26 +73,45 @@ func createConfigFile() {
 	os.WriteFile(".prdy_config.json", jsonConfigData, 0644)
 }
 
+/*
+ * MENU & USER INTERACTION
+ */
 func displayConfigMenu(searchConfig SearchConfig) {
 	fmt.Println("\n\t--- CONFIG MENU ---")
+	displayHitWords(&searchConfig, false)
+	displayExcludedVersions(&searchConfig)
+}
 
-	fmt.Println("\nHit words:")
-	for _, v := range searchConfig.HitWords {
-		fmt.Println("\t" + v)
+func displayHitWords(searchConfig *SearchConfig, displayIndices bool) {
+	fmt.Println("\nYour Hit Words are:")
+
+	if displayIndices {
+		for i, v := range searchConfig.HitWords {
+			fmt.Printf("\t%d. %s\n", i+1, v)
+		}
+
+	} else {
+		for _, v := range searchConfig.HitWords {
+			fmt.Println("\t" + v)
+		}
+
 	}
+}
 
-	fmt.Println("\nExcluded versions:")
+func displayExcludedVersions(searchConfig *SearchConfig) {
+	fmt.Println("\nYour Excluded Versions are:")
 	for _, v := range searchConfig.ExcludedVersion {
 		fmt.Println("\t" + v)
 	}
 }
 
-func getUserSelection() {
+func getUserSelection() *int {
 	menuOptions := []string{"\t1. Add hit word",
 		"\t2. Remove hit word",
 		"\t3. Add excluded version",
 		"\t4. Remove excluded version",
-		"\t5. Quit",
+		"\t5. Stop configuring and run program",
+		"\t6. Quit all together",
 	}
 	fmt.Println("\nWhat would you like to do?")
 	for _, option := range menuOptions {
@@ -72,12 +127,22 @@ func getUserSelection() {
 		getUserSelection()
 	}
 
-	switch selection {
-	case 1:
-		fmt.Println("user selected 1")
-	case 2:
-		fmt.Println("user selected 2")
-	}
+	return &selection
+}
+
+func updateConfigFile(searchConfig *SearchConfig) {
+	searchConfigJson, err := json.Marshal(*searchConfig)
+	check(err)
+	os.WriteFile(".prdy_config.json", searchConfigJson, 0644)
+}
+
+/*
+ * FILE HANDLING
+ */
+func closeFile(file fs.File) {
+	err := file.Close()
+	fmt.Println("Closed file")
+	check(err)
 }
 
 func readAndPrintFileByLine(file fs.File) {
@@ -105,6 +170,16 @@ func readAndPrintFileByLine(file fs.File) {
 	}
 
 }
+
+/*
+ * ERROR HANDLING
+ */
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 
 	if _, err := os.Stat(".prdy_config.json"); err != nil {
@@ -121,7 +196,8 @@ func main() {
 
 	if *userIsConfiguring {
 		displayConfigMenu(searchConfig)
-		getUserSelection()
+		userSelection := getUserSelection()
+		actionUserSelection(*userSelection, searchConfig)
 	} else {
 		fmt.Println("Not configuring")
 	}
