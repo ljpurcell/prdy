@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -14,26 +15,16 @@ import (
 // BENCHMARK first so that have something to write about
 
 type SearchConfig struct {
-	HitWords        []string
-	ExcludedVersion []string
+	HitWords         []string
+	ExcludedVersions []string
 }
 
 /*
  * CONFIGURATION
  */
-func actionUserSelection(userSelection int, searchConfig SearchConfig) {
-	defer updateConfigFile(&searchConfig)
-
-	switch userSelection {
-	case 1:
-		addNewHitWord(&searchConfig)
-	case 2:
-		removeHitWord(&searchConfig)
-	}
-
-}
-
 func addNewHitWord(searchConfig *SearchConfig) {
+	defer updateConfigFile(searchConfig)
+
 	fmt.Println("\n\t* Adding new Hit Word *")
 	fmt.Println("\nPlease type the word or pattern you want to match on.")
 	fmt.Println("TIP: If you are looking for a function, leave off the parenthesis -- unless you know the exact naming of the argument(s) it has been called with.")
@@ -48,6 +39,8 @@ func addNewHitWord(searchConfig *SearchConfig) {
 }
 
 func removeHitWord(searchConfig *SearchConfig) {
+	defer updateConfigFile(searchConfig)
+
 	fmt.Println("\n\t* Remove Hit Word *")
 	fmt.Println("\nPlease type the number of the word you want to remove.")
 	fmt.Println("TIP: If you want to remove mutliple words, type a space seperated list.")
@@ -55,15 +48,73 @@ func removeHitWord(searchConfig *SearchConfig) {
 	displayHitWords(searchConfig, true)
 
 	fmt.Print("\nRemove hit word: ")
-	var indexToRemove int
-	fmt.Scanln(&indexToRemove)
-	indexToRemove-- // Menu is 1-based, so need to decrement index
+	var indicesToRemove string
+	inputReader := bufio.NewReader(os.Stdin)
+	indicesToRemove, err := inputReader.ReadString('\n')
+	check(err)
 
-	removedWord := searchConfig.HitWords[indexToRemove]
-	copy(searchConfig.HitWords[indexToRemove:], searchConfig.HitWords[indexToRemove+1:])
-	searchConfig.HitWords = searchConfig.HitWords[:len(searchConfig.HitWords)-1]
+	providedIndices := strings.Split(indicesToRemove, " ")
 
-	fmt.Printf("Remove %q\n", removedWord)
+	for i, indexString := range providedIndices {
+		indexString = strings.TrimSpace(indexString)
+		indexValue, err := strconv.ParseInt(indexString, 10, strconv.IntSize)
+		check(err)
+
+		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
+		removedWord := searchConfig.HitWords[indexValue]
+		copy(searchConfig.HitWords[indexValue:], searchConfig.HitWords[indexValue+1:])
+		searchConfig.HitWords = searchConfig.HitWords[:len(searchConfig.HitWords)-1]
+
+		fmt.Printf("Removed %q\n", removedWord)
+	}
+}
+
+func addNewExcludedWord(searchConfig *SearchConfig) {
+	defer updateConfigFile(searchConfig)
+
+	fmt.Println("\n\t* Adding new Excluded Word *")
+	fmt.Println("\nPlease type the word or pattern you want to PREVENT matching on.")
+	fmt.Println("TIP: This is where you can use specific argument names to stop returning false positives.")
+	fmt.Print("Add excluded word: ")
+	var newExcludedWord string
+	fmt.Scanln(&newExcludedWord)
+
+	searchConfig.ExcludedVersions = append(searchConfig.ExcludedVersions, newExcludedWord)
+
+	fmt.Printf("Added %q\n", newExcludedWord)
+	displayExcludedVersions(searchConfig, false)
+}
+
+func removeExcludedWord(searchConfig *SearchConfig) {
+	defer updateConfigFile(searchConfig)
+
+	fmt.Println("\n\t* Remove Hit Word *")
+	fmt.Println("\nPlease type the number of the word you want to remove.")
+	fmt.Println("TIP: If you want to remove mutliple words, type a space seperated list.")
+
+	displayExcludedVersions(searchConfig, true)
+
+	fmt.Print("\nRemove excluded word: ")
+	var indicesToRemove string
+	inputReader := bufio.NewReader(os.Stdin)
+	indicesToRemove, err := inputReader.ReadString('\n')
+	check(err)
+
+	providedIndices := strings.Split(indicesToRemove, " ")
+
+	for i, indexString := range providedIndices {
+		indexString = strings.TrimSpace(indexString)
+		indexValue, err := strconv.ParseInt(indexString, 10, strconv.IntSize)
+		check(err)
+
+		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
+		removedWord := searchConfig.ExcludedVersions[indexValue]
+		copy(searchConfig.ExcludedVersions[indexValue:], searchConfig.ExcludedVersions[indexValue+1:])
+		searchConfig.ExcludedVersions = searchConfig.ExcludedVersions[:len(searchConfig.ExcludedVersions)-1]
+
+		fmt.Printf("Removed %q\n", removedWord)
+
+	}
 }
 
 func createConfigFile() {
@@ -79,29 +130,32 @@ func createConfigFile() {
 func displayConfigMenu(searchConfig SearchConfig) {
 	fmt.Println("\n\t--- CONFIG MENU ---")
 	displayHitWords(&searchConfig, false)
-	displayExcludedVersions(&searchConfig)
+	displayExcludedVersions(&searchConfig, false)
 }
 
 func displayHitWords(searchConfig *SearchConfig, displayIndices bool) {
 	fmt.Println("\nYour Hit Words are:")
-
 	if displayIndices {
 		for i, v := range searchConfig.HitWords {
-			fmt.Printf("\t%d. %s\n", i+1, v)
+			fmt.Printf("\t%d. %s\n", (i + 1), v)
 		}
-
 	} else {
 		for _, v := range searchConfig.HitWords {
-			fmt.Println("\t" + v)
+			fmt.Printf("\t%s\n", v)
 		}
-
 	}
 }
 
-func displayExcludedVersions(searchConfig *SearchConfig) {
+func displayExcludedVersions(searchConfig *SearchConfig, displayIndices bool) {
 	fmt.Println("\nYour Excluded Versions are:")
-	for _, v := range searchConfig.ExcludedVersion {
-		fmt.Println("\t" + v)
+	if displayIndices {
+		for i, v := range searchConfig.ExcludedVersions {
+			fmt.Printf("\t%d. %s\n", i+1, v)
+		}
+	} else {
+		for _, v := range searchConfig.ExcludedVersions {
+			fmt.Printf("\t%s\n", v)
+		}
 	}
 }
 
@@ -195,9 +249,27 @@ func main() {
 	flag.Parse()
 
 	if *userIsConfiguring {
-		displayConfigMenu(searchConfig)
-		userSelection := getUserSelection()
-		actionUserSelection(*userSelection, searchConfig)
+		showMenu := true
+
+		for showMenu {
+			displayConfigMenu(searchConfig)
+			userSelection := getUserSelection()
+
+			switch *userSelection {
+			case 1:
+				addNewHitWord(&searchConfig)
+			case 2:
+				removeHitWord(&searchConfig)
+			case 3:
+				addNewExcludedWord(&searchConfig)
+			case 4:
+				removeExcludedWord(&searchConfig)
+			case 5:
+				runTool(&searchConfig)
+			case 6:
+				showMenu = false
+			}
+		}
 	} else {
 		fmt.Println("Not configuring")
 	}
