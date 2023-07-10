@@ -11,12 +11,18 @@ import (
 	"strings"
 )
 
-// Options for optimising: pointers, printf over concatenation?, google other options 'https://golangdocs.com/techniques-to-maximize-your-go-applications-performance'
+/*
+ * TODO: refactor adding and removing duplication in config functions
+ */
+
+// Options for optimising: pointers, replacements for concatenation, reuse variables
+// google other options 'https://golangdocs.com/techniques-to-maximize-your-go-applications-performance'
 // BENCHMARK first so that have something to write about
 
 type SearchConfig struct {
 	HitWords         []string
 	ExcludedVersions []string
+	IgnoredFiles []string
 }
 
 /*
@@ -147,6 +153,42 @@ func removeExcludedWord(searchConfig *SearchConfig) {
 		fmt.Printf("Removed %q\n", removedWord)
 
 	}
+}
+
+func addIgnoredFile(searchConfig *SearchConfig) {
+	// if ignored files in config is empty and there is a .gitignore in the current directory, ask if the user wants to add use that
+	// Look at using filepath.Match or fs.Glob. Also research hot .gitnore files work
+}
+
+func removeIgnoredFile() {
+
+	defer updateConfigFile(searchConfig)
+
+	fmt.Println("\n\t* Remove Ignored File *")
+	fmt.Println("\nPlease type the number of the word you want to remove.")
+	fmt.Println("TIP: If you want to remove multiple files, type a space seperated list.")
+
+	displayIgnoredFiles(searchConfig, true)
+
+	fmt.Print("\nRemove ignored files: ")
+	var indicesToRemove string
+	inputReader := bufio.NewReader(os.Stdin)
+	indicesToRemove, err := inputReader.ReadString('\n')
+	check(err)
+
+	providedIndices := strings.Split(indicesToRemove, " ")
+
+	for i, indexString := range providedIndices {
+		indexString = strings.TrimSpace(indexString)
+		indexValue, err := strconv.ParseInt(indexString, 10, strconv.IntSize)
+		check(err)
+
+		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
+		removedWord := searchConfig.IgnoredFiles[indexValue]
+		copy(searchConfig.IgnoredFiles[indexValue:], searchConfig.IgnoredFiles[indexValue+1:])
+		searchConfig.IgnoredFiles = searchConfig.IgnoredFiles[:len(searchConfig.IgnoredFiles)-1]
+
+		fmt.Printf("Removed %q\n", removedWord)
 }
 
 func createConfigFile() {
