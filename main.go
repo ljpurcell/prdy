@@ -325,9 +325,9 @@ func check(err error) {
 /*
  * UTILITIES
  */
-func slice_contains_substring(haystack []string, needle string) bool {
-	for _, v := range haystack {
-		if strings.Contains(needle, v) {
+func slice_contains_substring(needles []string, haystack string) bool {
+	for _, needle := range needles {
+		if strings.Contains(haystack, needle) {
 			return true
 		}
 	}
@@ -382,7 +382,7 @@ func main() {
 		// pwd, err := os.Getwd()
 		// fsys := os.DirFS(pwd)
 
-		fsys := os.DirFS("/Users/LJPurcell/Code/prdy")
+		fsys := os.DirFS("/Users/LJPurcell/Code/tragics/")
 
 		// For walking the file system from root. Replace anonymous function with one that actually implements desired functionality
 		fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
