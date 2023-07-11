@@ -22,13 +22,13 @@ import (
 type SearchConfig struct {
 	HitWords         []string
 	ExcludedVersions []string
-	IgnoredFiles []string
+	IgnoredFiles     []string
 }
 
 /*
  * PRIMARY FUNCTIONALITY
  */
-func checkFileForHits(file fs.File) {
+func checkFileForHits(file fs.File, searchConfig *SearchConfig) {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
@@ -40,7 +40,7 @@ func checkFileForHits(file fs.File) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if strings.Contains(fileScanner.Text(), "#") {
+		if slice_contains_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_contains_substring(searchConfig.ExcludedVersions, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
@@ -48,9 +48,9 @@ func checkFileForHits(file fs.File) {
 
 	outputMap[fileName] = outputArray
 
-	for i, line := range outputMap[fileName] {
+	for i, line := range outputArray {
 		if i == 0 {
-			fmt.Printf("\n\t%s\n", fileName)
+			fmt.Printf("\n\tFile: %s", fileName)
 		}
 		fmt.Printf(line)
 	}
@@ -160,7 +160,7 @@ func addIgnoredFile(searchConfig *SearchConfig) {
 	// Look at using filepath.Match or fs.Glob. Also research hot .gitnore files work
 }
 
-func removeIgnoredFile() {
+func removeIgnoredFile(searchConfig *SearchConfig) {
 
 	defer updateConfigFile(searchConfig)
 
@@ -189,10 +189,11 @@ func removeIgnoredFile() {
 		searchConfig.IgnoredFiles = searchConfig.IgnoredFiles[:len(searchConfig.IgnoredFiles)-1]
 
 		fmt.Printf("Removed %q\n", removedWord)
+	}
 }
 
 func createConfigFile() {
-	defaultConfigStruct := SearchConfig{[]string{"var_dump", "dd", "console.log"}, []string{"console.log(error)", "console.log(exception)"}}
+	defaultConfigStruct := SearchConfig{[]string{"var_dump", "dd", "console.log"}, []string{"console.log(error)", "console.log(exception)"}, []string{}}
 	jsonConfigData, err := json.Marshal(defaultConfigStruct)
 	check(err)
 	os.WriteFile(".prdy_config.json", jsonConfigData, 0644)
@@ -228,6 +229,20 @@ func displayExcludedVersions(searchConfig *SearchConfig, displayIndices bool) {
 		}
 	} else {
 		for _, v := range searchConfig.ExcludedVersions {
+			fmt.Printf("\t%s\n", v)
+		}
+	}
+}
+
+func displayIgnoredFiles(searchConfig *SearchConfig, displayIndices bool) {
+
+	fmt.Println("\nYour Ignored Files are:")
+	if displayIndices {
+		for i, v := range searchConfig.IgnoredFiles {
+			fmt.Printf("\t%d. %s\n", i+1, v)
+		}
+	} else {
+		for _, v := range searchConfig.IgnoredFiles {
 			fmt.Printf("\t%s\n", v)
 		}
 	}
@@ -269,11 +284,10 @@ func updateConfigFile(searchConfig *SearchConfig) {
  */
 func closeFile(file fs.File) {
 	err := file.Close()
-	fmt.Println("Closed file")
 	check(err)
 }
 
-func readAndPrintFileByLine(file fs.File) {
+func readAndPrintFileByLine(file fs.File, searchConfig *SearchConfig) {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
@@ -285,7 +299,7 @@ func readAndPrintFileByLine(file fs.File) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if strings.Contains(fileScanner.Text(), "#") {
+		if slice_contains_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_contains_substring(searchConfig.ExcludedVersions, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
@@ -306,6 +320,18 @@ func check(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+/*
+ * UTILITIES
+ */
+func slice_contains_substring(haystack []string, needle string) bool {
+	for _, v := range haystack {
+		if strings.Contains(needle, v) {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
@@ -363,7 +389,7 @@ func main() {
 			f, err := fsys.Open(path)
 			check(err)
 			defer closeFile(f)
-			checkFileForHits(f)
+			checkFileForHits(f, &searchConfig)
 			return nil
 		})
 
