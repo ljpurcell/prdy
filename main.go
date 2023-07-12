@@ -40,7 +40,7 @@ func checkFileForHits(file fs.File, searchConfig *SearchConfig) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if slice_contains_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_contains_substring(searchConfig.ExcludedVersions, fileScanner.Text()) {
+		if slice_element_is_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_element_is_substring(searchConfig.ExcludedVersions, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
@@ -299,7 +299,7 @@ func readAndPrintFileByLine(file fs.File, searchConfig *SearchConfig) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if slice_contains_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_contains_substring(searchConfig.ExcludedVersions, fileScanner.Text()) {
+		if slice_element_is_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_element_is_substring(searchConfig.ExcludedVersions, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
@@ -325,7 +325,7 @@ func check(err error) {
 /*
  * UTILITIES
  */
-func slice_contains_substring(needles []string, haystack string) bool {
+func slice_element_is_substring(needles []string, haystack string) bool {
 	for _, needle := range needles {
 		if strings.Contains(haystack, needle) {
 			return true
