@@ -20,9 +20,22 @@ import (
 // BENCHMARK first so that have something to write about
 
 type SearchConfig struct {
-	HitWords         []string
-	ExcludedVersions []string
-	IgnoredFiles     []string
+	HitWords          []string
+	ExcludedWords     []string
+	SourceDirectories []string
+	IgnoredFiles      []string
+}
+
+func (sc *SearchConfig) addToField(element string, field []string) {
+	defer sc.updateConfigFile()
+	field = append(field, element)
+}
+
+// Undecided whether this should take in string or slice of strings to make adding multiple fields easier
+func (sc *SearchConfig) updateConfigFile() {
+	scJson, err := json.Marshal(*sc)
+	check(err)
+	os.WriteFile(".prdy_config.json", scJson, 0644)
 }
 
 /*
@@ -40,7 +53,7 @@ func checkFileForHits(file fs.File, searchConfig *SearchConfig) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if slice_element_is_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_element_is_substring(searchConfig.ExcludedVersions, fileScanner.Text()) {
+		if slice_element_is_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_element_is_substring(searchConfig.ExcludedWords, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
@@ -117,7 +130,7 @@ func addNewExcludedWord(searchConfig *SearchConfig) {
 	var newExcludedWord string
 	fmt.Scanln(&newExcludedWord)
 
-	searchConfig.ExcludedVersions = append(searchConfig.ExcludedVersions, newExcludedWord)
+	searchConfig.ExcludedWords = append(searchConfig.ExcludedWords, newExcludedWord)
 
 	fmt.Printf("Added %q\n", newExcludedWord)
 	displayExcludedVersions(searchConfig, false)
@@ -146,9 +159,9 @@ func removeExcludedWord(searchConfig *SearchConfig) {
 		check(err)
 
 		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
-		removedWord := searchConfig.ExcludedVersions[indexValue]
-		copy(searchConfig.ExcludedVersions[indexValue:], searchConfig.ExcludedVersions[indexValue+1:])
-		searchConfig.ExcludedVersions = searchConfig.ExcludedVersions[:len(searchConfig.ExcludedVersions)-1]
+		removedWord := searchConfig.ExcludedWords[indexValue]
+		copy(searchConfig.ExcludedWords[indexValue:], searchConfig.ExcludedWords[indexValue+1:])
+		searchConfig.ExcludedWords = searchConfig.ExcludedWords[:len(searchConfig.ExcludedWords)-1]
 
 		fmt.Printf("Removed %q\n", removedWord)
 
@@ -192,7 +205,7 @@ func removeIgnoredFile(searchConfig *SearchConfig) {
 	}
 }
 
-func createConfigFile() {
+func runConfigWizard() {
 	defaultConfigStruct := SearchConfig{[]string{"var_dump", "dd", "console.log"}, []string{"console.log(error)", "console.log(exception)"}, []string{}}
 	jsonConfigData, err := json.Marshal(defaultConfigStruct)
 	check(err)
@@ -224,11 +237,11 @@ func displayHitWords(searchConfig *SearchConfig, displayIndices bool) {
 func displayExcludedVersions(searchConfig *SearchConfig, displayIndices bool) {
 	fmt.Println("\nYour Excluded Versions are:")
 	if displayIndices {
-		for i, v := range searchConfig.ExcludedVersions {
+		for i, v := range searchConfig.ExcludedWords {
 			fmt.Printf("\t%d. %s\n", i+1, v)
 		}
 	} else {
-		for _, v := range searchConfig.ExcludedVersions {
+		for _, v := range searchConfig.ExcludedWords {
 			fmt.Printf("\t%s\n", v)
 		}
 	}
@@ -249,12 +262,15 @@ func displayIgnoredFiles(searchConfig *SearchConfig, displayIndices bool) {
 }
 
 func getUserSelection() *int {
+	// Refactor into sections for configuring hit words, then prompt for adding or removing
 	menuOptions := []string{"\t1. Add hit word",
 		"\t2. Remove hit word",
 		"\t3. Add excluded version",
 		"\t4. Remove excluded version",
-		"\t5. Stop configuring and run program",
-		"\t6. Quit all together",
+		"\t5. Add ignored file or file type",
+		"\t6. Remove ignored file or file type",
+		"\t7. Stop configuring and run program",
+		"\t8. Quit all together",
 	}
 	fmt.Println("\nWhat would you like to do?")
 	for _, option := range menuOptions {
@@ -271,12 +287,6 @@ func getUserSelection() *int {
 	}
 
 	return &selection
-}
-
-func updateConfigFile(searchConfig *SearchConfig) {
-	searchConfigJson, err := json.Marshal(*searchConfig)
-	check(err)
-	os.WriteFile(".prdy_config.json", searchConfigJson, 0644)
 }
 
 /*
@@ -299,7 +309,7 @@ func readAndPrintFileByLine(file fs.File, searchConfig *SearchConfig) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if slice_element_is_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_element_is_substring(searchConfig.ExcludedVersions, fileScanner.Text()) {
+		if slice_element_is_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_element_is_substring(searchConfig.ExcludedWords, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
@@ -334,11 +344,53 @@ func slice_element_is_substring(needles []string, haystack string) bool {
 	return false
 }
 
+func getGitIgnorePatterns() []string {
+	file, err := os.Open(".gitignore")
+	check(err)
+	defer closeFile(file)
+
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+
+	var ignoredPatterns []string
+	for scanner.Scan() {
+
+		// comments in gitignore file
+		if !strings.HasPrefix(scanner.Text(), "#") && len(strings.TrimSpace(scanner.Text())) != 0 {
+			ignoredPatterns = append(ignoredPatterns, scanner.Text())
+		}
+	}
+	return ignoredPatterns
+}
+
+func checkIfUserWantsToSetUpConfigFile() bool {
+	fmt.Println("It appears you don't have a configuration file in this directory.")
+	fmt.Println("You may be setting up a new project, or accidentally running this tool outside the base of your project.")
+	fmt.Println("\nEnter y[es] if you'd like to create a new configuration file. (Entering n[o] will quit.)")
+
+	var response string
+	for {
+		fmt.Scanln(&response)
+
+		if strings.HasPrefix(response, "y") || strings.HasPrefix(response, "Y") {
+			return true
+		}
+
+		if strings.HasPrefix(response, "n") || strings.HasPrefix(response, "N") {
+			return false
+		}
+	}
+}
+
 func main() {
 	runTool := true
 
 	if _, err := os.Stat(".prdy_config.json"); err != nil {
-		createConfigFile()
+		wantsToSetUpConfig := checkIfUserWantsToSetUpConfigFile()
+
+		if wantsToSetUpConfig {
+			runConfigWizard()
+		}
 	}
 
 	configJson, err := os.ReadFile(".prdy_config.json")
@@ -369,9 +421,13 @@ func main() {
 			case 4:
 				removeExcludedWord(&searchConfig)
 			case 5:
+				addIgnoredFile(&searchConfig)
+			case 6:
+				removeIgnoredFile(&searchConfig)
+			case 7:
 				runTool = true
 				showMenu = false
-			case 6:
+			case 8:
 				showMenu = false
 			}
 		}
@@ -379,19 +435,29 @@ func main() {
 
 	if runTool {
 		// For getting the current working directory. Add basic checks and error handling if there isn't a .env file or app folder, ask the user if they are running it from the root
-		// pwd, err := os.Getwd()
-		// fsys := os.DirFS(pwd)
+		pwd, err := os.Getwd()
 
-		fsys := os.DirFS("/Users/LJPurcell/Code/tragics/")
+		check(err)
+		fsys := os.DirFS(pwd)
+		patterns := getGitIgnorePatterns()
 
-		// For walking the file system from root. Replace anonymous function with one that actually implements desired functionality
-		fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
-			f, err := fsys.Open(path)
-			check(err)
-			defer closeFile(f)
-			checkFileForHits(f, &searchConfig)
-			return nil
-		})
+		// pattern := "*.go"
+		// files, err := fs.Glob(fsys, pattern)
+		// check(err)
+
+		// Loop over provided source code directories, passing each to walkdDir
+		// fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
+		//
+		// 	for _, pattern := range patterns {
+		// 		matched, err := filepath.Match(pattern, path)
+		// 		check(err)
+		//
+		// 		if matched {
+		// 			fmt.Printf("File %s matched for pattern %q\n", path, pattern)
+		// 		}
+		// 	}
+		// 	return nil
+		// })
 
 		// if errors array isn't empty, display lines for each file and prompt user if they want to run tests or abort to fix
 
