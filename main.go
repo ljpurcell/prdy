@@ -11,6 +11,90 @@ import (
 	"strings"
 )
 
+func main() {
+	runTool := true
+
+	if _, err := os.Stat(".prdy_config.json"); err != nil {
+		wantsToSetUpConfig := checkIfUserWantsToSetUpConfigFile()
+
+		if wantsToSetUpConfig {
+			runConfigWizard()
+		}
+	}
+
+	configJson, err := os.ReadFile(".prdy_config.json")
+	check(err)
+	var sc SearchConfig
+	json.Unmarshal(configJson, &sc)
+
+	// Check whether the user is running or configuring the tool
+	userIsConfiguring := flag.Bool("config", false, "Bool (default: false). Open the configuration menu instead of immediately running the tool.")
+	flag.Parse()
+
+	if *userIsConfiguring {
+
+		runTool = false
+		showMenu := true
+
+		for showMenu {
+			displayConfigMenu(sc)
+			userSelection := getUserSelection()
+
+			switch *userSelection {
+			case 1:
+				addNewHitWord(&sc)
+			case 2:
+				removeHitWord(&sc)
+			case 3:
+				addNewExcludedWord(&sc)
+			case 4:
+				removeExcludedWord(&sc)
+			case 5:
+				addIgnoredFile(&sc)
+			case 6:
+				removeIgnoredFile(&sc)
+			case 7:
+				runTool = true
+				showMenu = false
+			case 8:
+				showMenu = false
+			}
+		}
+	}
+
+	if runTool {
+		// For getting the current working directory. Add basic checks and error handling if there isn't a .env file or app folder, ask the user if they are running it from the root
+		// pwd, err := os.Getwd()
+
+		check(err)
+		// fsys := os.DirFS(pwd)
+		// patterns := getGitIgnorePatterns()
+
+		// pattern := "*.go"
+		// files, err := fs.Glob(fsys, pattern)
+		// check(err)
+
+		// Loop over provided source code directories, passing each to walkdDir
+		// fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
+		//
+		// 	for _, pattern := range patterns {
+		// 		matched, err := filepath.Match(pattern, path)
+		// 		check(err)
+		//
+		// 		if matched {
+		// 			fmt.Printf("File %s matched for pattern %q\n", path, pattern)
+		// 		}
+		// 	}
+		// 	return nil
+		// })
+
+		// if errors array isn't empty, display lines for each file and prompt user if they want to run tests or abort to fix
+
+		// run tests if errors array is empty
+
+	}
+}
+
 /*
  * TODO: refactor adding and removing duplication in config functions
  */
@@ -26,9 +110,17 @@ type SearchConfig struct {
 	IgnoredFiles      []string
 }
 
-func (sc *SearchConfig) addToField(element string, field []string) {
+func (sc *SearchConfig) addToField(element string, field *[]string) {
 	defer sc.updateConfigFile()
-	field = append(field, element)
+	*field = append(*field, element)
+}
+
+func (sc *SearchConfig) removeFromField(index int, field *[]string) string {
+	defer sc.updateConfigFile()
+	removedElement := (*field)[index]
+	copy((*field)[index:], (*field)[index+1:])
+	(*field) = (*field)[:len((*field))-1]
+	return removedElement
 }
 
 // Undecided whether this should take in string or slice of strings to make adding multiple fields easier
@@ -41,7 +133,7 @@ func (sc *SearchConfig) updateConfigFile() {
 /*
  * PRIMARY FUNCTIONALITY
  */
-func checkFileForHits(file fs.File, searchConfig *SearchConfig) {
+func checkFileForHits(file fs.File, sc *SearchConfig) {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
@@ -53,7 +145,7 @@ func checkFileForHits(file fs.File, searchConfig *SearchConfig) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if slice_element_is_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_element_is_substring(searchConfig.ExcludedWords, fileScanner.Text()) {
+		if slice_element_is_substring(sc.HitWords, fileScanner.Text()) && !slice_element_is_substring(sc.ExcludedWords, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
@@ -73,8 +165,8 @@ func checkFileForHits(file fs.File, searchConfig *SearchConfig) {
 /*
  * CONFIGURATION
  */
-func addNewHitWord(searchConfig *SearchConfig) {
-	defer updateConfigFile(searchConfig)
+func addNewHitWord(sc *SearchConfig) {
+	// defer sc.updateConfigFile(sc)
 
 	fmt.Println("\n\t* Adding new Hit Word *")
 	fmt.Println("\nPlease type the word or pattern you want to match on.")
@@ -83,20 +175,20 @@ func addNewHitWord(searchConfig *SearchConfig) {
 	var newHitWord string
 	fmt.Scanln(&newHitWord)
 
-	searchConfig.HitWords = append(searchConfig.HitWords, newHitWord)
+	sc.HitWords = append(sc.HitWords, newHitWord)
 
 	fmt.Printf("Added %q\n", newHitWord)
-	displayHitWords(searchConfig, false)
+	displayHitWords(sc, false)
 }
 
-func removeHitWord(searchConfig *SearchConfig) {
-	defer updateConfigFile(searchConfig)
+func removeHitWord(sc *SearchConfig) {
+	// defer sc.updateConfigFile(sc)
 
 	fmt.Println("\n\t* Remove Hit Word *")
 	fmt.Println("\nPlease type the number of the word you want to remove.")
 	fmt.Println("TIP: If you want to remove mutliple words, type a space seperated list.")
 
-	displayHitWords(searchConfig, true)
+	displayHitWords(sc, true)
 
 	fmt.Print("\nRemove hit word: ")
 	var indicesToRemove string
@@ -112,16 +204,16 @@ func removeHitWord(searchConfig *SearchConfig) {
 		check(err)
 
 		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
-		removedWord := searchConfig.HitWords[indexValue]
-		copy(searchConfig.HitWords[indexValue:], searchConfig.HitWords[indexValue+1:])
-		searchConfig.HitWords = searchConfig.HitWords[:len(searchConfig.HitWords)-1]
+		removedWord := sc.HitWords[indexValue]
+		copy(sc.HitWords[indexValue:], sc.HitWords[indexValue+1:])
+		sc.HitWords = sc.HitWords[:len(sc.HitWords)-1]
 
 		fmt.Printf("Removed %q\n", removedWord)
 	}
 }
 
-func addNewExcludedWord(searchConfig *SearchConfig) {
-	defer updateConfigFile(searchConfig)
+func addNewExcludedWord(sc *SearchConfig) {
+	// defer sc.updateConfigFile(sc)
 
 	fmt.Println("\n\t* Adding new Excluded Word *")
 	fmt.Println("\nPlease type the word or pattern you want to PREVENT matching on.")
@@ -130,20 +222,20 @@ func addNewExcludedWord(searchConfig *SearchConfig) {
 	var newExcludedWord string
 	fmt.Scanln(&newExcludedWord)
 
-	searchConfig.ExcludedWords = append(searchConfig.ExcludedWords, newExcludedWord)
+	sc.ExcludedWords = append(sc.ExcludedWords, newExcludedWord)
 
 	fmt.Printf("Added %q\n", newExcludedWord)
-	displayExcludedVersions(searchConfig, false)
+	displayExcludedVersions(sc, false)
 }
 
-func removeExcludedWord(searchConfig *SearchConfig) {
-	defer updateConfigFile(searchConfig)
+func removeExcludedWord(sc *SearchConfig) {
+	// defer sc.updateConfigFile(sc)
 
 	fmt.Println("\n\t* Remove Hit Word *")
 	fmt.Println("\nPlease type the number of the word you want to remove.")
 	fmt.Println("TIP: If you want to remove mutliple words, type a space seperated list.")
 
-	displayExcludedVersions(searchConfig, true)
+	displayExcludedVersions(sc, true)
 
 	fmt.Print("\nRemove excluded word: ")
 	var indicesToRemove string
@@ -159,29 +251,29 @@ func removeExcludedWord(searchConfig *SearchConfig) {
 		check(err)
 
 		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
-		removedWord := searchConfig.ExcludedWords[indexValue]
-		copy(searchConfig.ExcludedWords[indexValue:], searchConfig.ExcludedWords[indexValue+1:])
-		searchConfig.ExcludedWords = searchConfig.ExcludedWords[:len(searchConfig.ExcludedWords)-1]
+		removedWord := sc.ExcludedWords[indexValue]
+		copy(sc.ExcludedWords[indexValue:], sc.ExcludedWords[indexValue+1:])
+		sc.ExcludedWords = sc.ExcludedWords[:len(sc.ExcludedWords)-1]
 
 		fmt.Printf("Removed %q\n", removedWord)
 
 	}
 }
 
-func addIgnoredFile(searchConfig *SearchConfig) {
+func addIgnoredFile(sc *SearchConfig) {
 	// if ignored files in config is empty and there is a .gitignore in the current directory, ask if the user wants to add use that
 	// Look at using filepath.Match or fs.Glob. Also research hot .gitnore files work
 }
 
-func removeIgnoredFile(searchConfig *SearchConfig) {
+func removeIgnoredFile(sc *SearchConfig) {
 
-	defer updateConfigFile(searchConfig)
+	// defer sc.updateConfigFile(sc)
 
 	fmt.Println("\n\t* Remove Ignored File *")
 	fmt.Println("\nPlease type the number of the word you want to remove.")
 	fmt.Println("TIP: If you want to remove multiple files, type a space seperated list.")
 
-	displayIgnoredFiles(searchConfig, true)
+	displayIgnoredFiles(sc, true)
 
 	fmt.Print("\nRemove ignored files: ")
 	var indicesToRemove string
@@ -197,16 +289,16 @@ func removeIgnoredFile(searchConfig *SearchConfig) {
 		check(err)
 
 		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
-		removedWord := searchConfig.IgnoredFiles[indexValue]
-		copy(searchConfig.IgnoredFiles[indexValue:], searchConfig.IgnoredFiles[indexValue+1:])
-		searchConfig.IgnoredFiles = searchConfig.IgnoredFiles[:len(searchConfig.IgnoredFiles)-1]
+		removedWord := sc.IgnoredFiles[indexValue]
+		copy(sc.IgnoredFiles[indexValue:], sc.IgnoredFiles[indexValue+1:])
+		sc.IgnoredFiles = sc.IgnoredFiles[:len(sc.IgnoredFiles)-1]
 
 		fmt.Printf("Removed %q\n", removedWord)
 	}
 }
 
 func runConfigWizard() {
-	defaultConfigStruct := SearchConfig{[]string{"var_dump", "dd", "console.log"}, []string{"console.log(error)", "console.log(exception)"}, []string{}}
+	defaultConfigStruct := SearchConfig{[]string{"var_dump", "dd", "console.log"}, []string{"console.log(error)", "console.log(exception)"}, []string{}, []string{}}
 	jsonConfigData, err := json.Marshal(defaultConfigStruct)
 	check(err)
 	os.WriteFile(".prdy_config.json", jsonConfigData, 0644)
@@ -215,47 +307,47 @@ func runConfigWizard() {
 /*
  * MENU & USER INTERACTION
  */
-func displayConfigMenu(searchConfig SearchConfig) {
+func displayConfigMenu(sc SearchConfig) {
 	fmt.Println("\n\t--- CONFIG MENU ---")
-	displayHitWords(&searchConfig, false)
-	displayExcludedVersions(&searchConfig, false)
+	displayHitWords(&sc, false)
+	displayExcludedVersions(&sc, false)
 }
 
-func displayHitWords(searchConfig *SearchConfig, displayIndices bool) {
+func displayHitWords(sc *SearchConfig, displayIndices bool) {
 	fmt.Println("\nYour Hit Words are:")
 	if displayIndices {
-		for i, v := range searchConfig.HitWords {
+		for i, v := range sc.HitWords {
 			fmt.Printf("\t%d. %s\n", (i + 1), v)
 		}
 	} else {
-		for _, v := range searchConfig.HitWords {
+		for _, v := range sc.HitWords {
 			fmt.Printf("\t%s\n", v)
 		}
 	}
 }
 
-func displayExcludedVersions(searchConfig *SearchConfig, displayIndices bool) {
+func displayExcludedVersions(sc *SearchConfig, displayIndices bool) {
 	fmt.Println("\nYour Excluded Versions are:")
 	if displayIndices {
-		for i, v := range searchConfig.ExcludedWords {
+		for i, v := range sc.ExcludedWords {
 			fmt.Printf("\t%d. %s\n", i+1, v)
 		}
 	} else {
-		for _, v := range searchConfig.ExcludedWords {
+		for _, v := range sc.ExcludedWords {
 			fmt.Printf("\t%s\n", v)
 		}
 	}
 }
 
-func displayIgnoredFiles(searchConfig *SearchConfig, displayIndices bool) {
+func displayIgnoredFiles(sc *SearchConfig, displayIndices bool) {
 
 	fmt.Println("\nYour Ignored Files are:")
 	if displayIndices {
-		for i, v := range searchConfig.IgnoredFiles {
+		for i, v := range sc.IgnoredFiles {
 			fmt.Printf("\t%d. %s\n", i+1, v)
 		}
 	} else {
-		for _, v := range searchConfig.IgnoredFiles {
+		for _, v := range sc.IgnoredFiles {
 			fmt.Printf("\t%s\n", v)
 		}
 	}
@@ -297,7 +389,7 @@ func closeFile(file fs.File) {
 	check(err)
 }
 
-func readAndPrintFileByLine(file fs.File, searchConfig *SearchConfig) {
+func readAndPrintFileByLine(file fs.File, sc *SearchConfig) {
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
@@ -309,7 +401,7 @@ func readAndPrintFileByLine(file fs.File, searchConfig *SearchConfig) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if slice_element_is_substring(searchConfig.HitWords, fileScanner.Text()) && !slice_element_is_substring(searchConfig.ExcludedWords, fileScanner.Text()) {
+		if slice_element_is_substring(sc.HitWords, fileScanner.Text()) && !slice_element_is_substring(sc.ExcludedWords, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
@@ -379,89 +471,5 @@ func checkIfUserWantsToSetUpConfigFile() bool {
 		if strings.HasPrefix(response, "n") || strings.HasPrefix(response, "N") {
 			return false
 		}
-	}
-}
-
-func main() {
-	runTool := true
-
-	if _, err := os.Stat(".prdy_config.json"); err != nil {
-		wantsToSetUpConfig := checkIfUserWantsToSetUpConfigFile()
-
-		if wantsToSetUpConfig {
-			runConfigWizard()
-		}
-	}
-
-	configJson, err := os.ReadFile(".prdy_config.json")
-	check(err)
-	var searchConfig SearchConfig
-	json.Unmarshal(configJson, &searchConfig)
-
-	// Check whether the user is running or configuring the tool
-	userIsConfiguring := flag.Bool("config", false, "Bool (default: false). Open the configuration menu instead of immediately running the tool.")
-	flag.Parse()
-
-	if *userIsConfiguring {
-
-		runTool = false
-		showMenu := true
-
-		for showMenu {
-			displayConfigMenu(searchConfig)
-			userSelection := getUserSelection()
-
-			switch *userSelection {
-			case 1:
-				addNewHitWord(&searchConfig)
-			case 2:
-				removeHitWord(&searchConfig)
-			case 3:
-				addNewExcludedWord(&searchConfig)
-			case 4:
-				removeExcludedWord(&searchConfig)
-			case 5:
-				addIgnoredFile(&searchConfig)
-			case 6:
-				removeIgnoredFile(&searchConfig)
-			case 7:
-				runTool = true
-				showMenu = false
-			case 8:
-				showMenu = false
-			}
-		}
-	}
-
-	if runTool {
-		// For getting the current working directory. Add basic checks and error handling if there isn't a .env file or app folder, ask the user if they are running it from the root
-		pwd, err := os.Getwd()
-
-		check(err)
-		fsys := os.DirFS(pwd)
-		patterns := getGitIgnorePatterns()
-
-		// pattern := "*.go"
-		// files, err := fs.Glob(fsys, pattern)
-		// check(err)
-
-		// Loop over provided source code directories, passing each to walkdDir
-		// fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
-		//
-		// 	for _, pattern := range patterns {
-		// 		matched, err := filepath.Match(pattern, path)
-		// 		check(err)
-		//
-		// 		if matched {
-		// 			fmt.Printf("File %s matched for pattern %q\n", path, pattern)
-		// 		}
-		// 	}
-		// 	return nil
-		// })
-
-		// if errors array isn't empty, display lines for each file and prompt user if they want to run tests or abort to fix
-
-		// run tests if errors array is empty
-
 	}
 }
