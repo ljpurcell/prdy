@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -110,24 +111,44 @@ type SearchConfig struct {
 	IgnoredFiles      []string
 }
 
-func (sc *SearchConfig) addToField(element string, field *[]string) {
+func (sc *SearchConfig) addToField(elements []string, field *[]string) {
 	defer sc.updateConfigFile()
-	*field = append(*field, element)
+	for _, element := range elements {
+		*field = append(*field, element)
+	}
 }
 
-func (sc *SearchConfig) removeFromField(index int, field *[]string) string {
+func (sc *SearchConfig) removeFromField(indicesStr []string, field *[]string) ([]string, error) {
 	defer sc.updateConfigFile()
-	removedElement := (*field)[index]
-	copy((*field)[index:], (*field)[index+1:])
-	(*field) = (*field)[:len((*field))-1]
-	return removedElement
+	var removedElements []string
+	var err error
+
+	indices := toIntSorted(indicesStr)
+
+	for i, index := range indices {
+		toRemove := index - i
+		removedElements = append(removedElements, (*field)[toRemove])
+		copy((*field)[toRemove:], (*field)[toRemove+1:])
+		(*field) = (*field)[:len((*field))-1]
+	}
+	return removedElements, err
 }
 
-// Undecided whether this should take in string or slice of strings to make adding multiple fields easier
 func (sc *SearchConfig) updateConfigFile() {
 	scJson, err := json.Marshal(*sc)
 	check(err)
 	os.WriteFile(".prdy_config.json", scJson, 0644)
+}
+
+func toIntSorted(input []string) []int {
+	var result []int
+	for _, strV := range input {
+		intV, err := strconv.ParseInt(strV, 10, strconv.IntSize)
+		check(err)
+		result = append(result, int(intV))
+	}
+	sort.Ints(result)
+	return result
 }
 
 /*
