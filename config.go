@@ -1,13 +1,16 @@
-package config
+package main
 
 import (
+    "bufio"
     "fmt"
-    "github.com/ljpurcell/prdy/utils"
-
+    "os"
+    "encoding/json"
+    "strings"
+    "strconv"
 )
 
 /**
- * DATA TYPE
+ * CONFIGUATION STRUCT
  */
 type SearchConfig struct {
 	HitWords          []string
@@ -32,7 +35,7 @@ func (sc *SearchConfig) removeFromField(indicesStr []string, field *[]string) ([
 	var removedElements []string
 	var err error
 
-	indices := toIntSorted(indicesStr)
+	indices := ToIntSorted(indicesStr)
 
 	for i, index := range indices {
 		toRemove := index - i
@@ -45,55 +48,13 @@ func (sc *SearchConfig) removeFromField(indicesStr []string, field *[]string) ([
 
 func (sc *SearchConfig) updateConfigFile() {
 	scJson, err := json.Marshal(*sc)
-	check(err)
+	Check(err)
 	os.WriteFile(".prdy_config.json", scJson, 0644)
 }
 
-func addHitWords(sc *SearchConfig) {
-	defer sc.updateConfigFile()
 
-	fmt.Println("\n\t* Add Hit Words *")
-	fmt.Println("\nPlease type the pattern you want to match on. To add multiple, use a space seperated list.")
-	fmt.Println("TIP: If you are looking for a function, leave off the parenthesis -- unless you know the exact naming of the argument(s) it has been called with.")
-	fmt.Print("Add hit word: ")
-	var input string
-	fmt.Scanln(&input)
-	wordsToAdd := strings.Split(input, " ")
-	sc.addToField(wordsToAdd, &sc.HitWords)
-}
 
-func removeHitWord(sc *SearchConfig) {
-	// defer sc.updateConfigFile(sc)
-
-	fmt.Println("\n\t* Remove Hit Word *")
-	fmt.Println("\nPlease type the number of the word you want to remove.")
-	fmt.Println("TIP: If you want to remove mutliple words, type a space seperated list.")
-
-	displayHitWords(sc, true)
-
-	fmt.Print("\nRemove hit word: ")
-	var indicesToRemove string
-	inputReader := bufio.NewReader(os.Stdin)
-	indicesToRemove, err := inputReader.ReadString('\n')
-	check(err)
-
-	providedIndices := strings.Split(indicesToRemove, " ")
-
-	for i, indexString := range providedIndices {
-		indexString = strings.TrimSpace(indexString)
-		indexValue, err := strconv.ParseInt(indexString, 10, strconv.IntSize)
-		check(err)
-
-		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
-		removedWord := sc.HitWords[indexValue]
-		copy(sc.HitWords[indexValue:], sc.HitWords[indexValue+1:])
-		sc.HitWords = sc.HitWords[:len(sc.HitWords)-1]
-
-		fmt.Printf("Removed %q\n", removedWord)
-	}
-}
-
-func addExcludedWords(sc *SearchConfig) {
+func addExcludedWord(sc *SearchConfig) {
 	// defer sc.updateConfigFile(sc)
 
 	fmt.Println("\n\t* Adding new Excluded Word *")
@@ -119,14 +80,14 @@ func removeExcludedWord(sc *SearchConfig) {
 	var indicesToRemove string
 	inputReader := bufio.NewReader(os.Stdin)
 	indicesToRemove, err := inputReader.ReadString('\n')
-	check(err)
+	Check(err)
 
 	providedIndices := strings.Split(indicesToRemove, " ")
 
 	for i, indexString := range providedIndices {
 		indexString = strings.TrimSpace(indexString)
 		indexValue, err := strconv.ParseInt(indexString, 10, strconv.IntSize)
-		check(err)
+		Check(err)
 
 		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
 		removedWord := sc.ExcludedWords[indexValue]
@@ -157,14 +118,14 @@ func removeIgnoredFile(sc *SearchConfig) {
 	var indicesToRemove string
 	inputReader := bufio.NewReader(os.Stdin)
 	indicesToRemove, err := inputReader.ReadString('\n')
-	check(err)
+	Check(err)
 
 	providedIndices := strings.Split(indicesToRemove, " ")
 
 	for i, indexString := range providedIndices {
 		indexString = strings.TrimSpace(indexString)
 		indexValue, err := strconv.ParseInt(indexString, 10, strconv.IntSize)
-		check(err)
+		Check(err)
 
 		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
 		removedWord := sc.IgnoredFiles[indexValue]
@@ -177,8 +138,8 @@ func removeIgnoredFile(sc *SearchConfig) {
 
 func getGitIgnorePatterns() []string {
 	file, err := os.Open(".gitignore")
-	utils.Check(err)
-	defer utils.CloseFile(file)
+	Check(err)
+	defer CloseFile(file)
 
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
@@ -192,4 +153,20 @@ func getGitIgnorePatterns() []string {
 		}
 	}
 	return ignoredPatterns
+}
+
+func loadConfig() *SearchConfig {
+	configJson, err := os.ReadFile(".prdy_config.json")
+	Check(err)
+	var sc SearchConfig
+	json.Unmarshal(configJson, &sc)
+    return &sc
+}
+
+func createEmptyConfig() *SearchConfig {
+    sc := &SearchConfig{}
+    jsonSc, err := json.Marshal(sc)
+    Check(err)
+	os.WriteFile(".prdy_config.json", jsonSc, 0644)
+    return sc
 }

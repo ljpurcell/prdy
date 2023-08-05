@@ -1,12 +1,10 @@
-package utils
+package main
 
 import (
-    "fmt"
     "strconv"
     "strings"
     "sort"
     "io/fs"
-    "bufio"
 )
 
 
