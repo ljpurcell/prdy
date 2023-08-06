@@ -48,3 +48,8 @@ func CloseFile(file fs.File) {
 	Check(err)
 }
 
+
+/*
+ * GLOB MATCHING
+ */
+// https://github.com/bmatcuk/doublestar

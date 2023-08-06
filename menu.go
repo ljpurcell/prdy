@@ -58,7 +58,7 @@ func displayConfigMenu(sc *SearchConfig) {
     case 3:
         displayCurrentConfig(sc)
     case 4:
-        runTool()
+        runTool(sc)
     case 5:
         quitEverything()
     }
@@ -175,6 +175,8 @@ func addHitWord(sc *SearchConfig) {
 	sc.addToField(wordsToAdd, &sc.HitWords)
 }
 
+
+// Can be refactored, doesn't use sc.RemoveFromField method
 func removeHitWord(sc *SearchConfig) {
     defer sc.updateConfigFile()
 
@@ -204,4 +206,12 @@ func removeHitWord(sc *SearchConfig) {
 
 		fmt.Printf("Removed %q\n", removedWord)
 	}
+}
+
+func runTool(sc *SearchConfig) {
+    fmt.Printf("Running with configuration: %v\n", sc)
+}
+
+func quitEverything() {
+    return
 }

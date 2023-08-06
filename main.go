@@ -2,12 +2,10 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"flag"
 	"io/fs"
     "fmt"
 	"os"
-	"strings"
 )
 
 func main() {
@@ -78,16 +76,6 @@ func main() {
 // Options for optimising: pointers, replacements for concatenation, reuse variables
 // google other options 'https://golangdocs.com/techniques-to-maximize-your-go-applications-performance'
 // BENCHMARK first so that have something to write about
-
-
-
-
-func runConfigWizard(sc *SearchConfig) {
-	addHitWords(sc)
-	addExcludedWords(sc)
-	// prompt read in latest gitignore file
-	os.WriteFile(".prdy_config.json", jsonConfigData, 0644)
-}
 
 
 func ReadAndPrintFileByLine(file fs.File, sc *SearchConfig) {

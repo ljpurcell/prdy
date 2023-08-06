@@ -10,7 +10,7 @@ func TestSliceElementIsSubstringWhenTrue(t *testing.T) {
 	stringToSearch := "slices"
 
 	expected := true
-	actual := slice_element_is_substring(sliceOfSubstrings, stringToSearch)
+	actual := SliceElementIsSubstring(sliceOfSubstrings, stringToSearch)
 
 	if actual != expected {
 		t.Errorf("Expected: %v. Actual: %v. Using slice of %v and string of %q.", expected, actual, sliceOfSubstrings, stringToSearch)
@@ -22,7 +22,7 @@ func TestSliceElementIsSubstringWhenFalse(t *testing.T) {
 	stringToSearch := "bananas"
 
 	expected := false
-	actual := slice_element_is_substring(sliceOfSubstrings, stringToSearch)
+	actual := SliceElementIsSubstring(sliceOfSubstrings, stringToSearch)
 
 	if actual != expected {
 		t.Errorf("Expected: %v. Actual: %v. Using slice of %v and string of %q.", expected, actual, sliceOfSubstrings, stringToSearch)
@@ -44,7 +44,7 @@ func TestSearchConfigAddMethod(t *testing.T) {
 
 func TestStringToIntSliceSorted(t *testing.T) {
 	expected := []int{1, 2, 3, 4, 5}
-	actual := toIntSorted([]string{"1", "5", "4", "2", "3"})
+	actual := ToIntSorted([]string{"1", "5", "4", "2", "3"})
 
 	if len(expected) != len(actual) {
 		t.Errorf("Length - Expected: %v. Actual: %v.", expected, actual)
