@@ -61,9 +61,13 @@ func addExcludedWord(sc *SearchConfig) {
 	fmt.Println("\nPlease type the word or pattern you want to PREVENT matching on.")
 	fmt.Println("TIP: This is where you can use specific argument names to stop returning false positives.")
 	fmt.Print("Add excluded word: ")
-	var input string
-	fmt.Scanln(&input)
-	wordsToAdd := strings.Split(input, " ")
+
+    scanner := bufio.NewScanner(os.Stdin)
+    scanner.Scan()
+    err := scanner.Err()
+    Check(err)
+
+	wordsToAdd := strings.Split(scanner.Text(), " ")
 	sc.addToField(wordsToAdd, &sc.ExcludedWords)
 }
 

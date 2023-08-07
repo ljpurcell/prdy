@@ -169,9 +169,13 @@ func addHitWord(sc *SearchConfig) {
 	fmt.Println("\nPlease type the pattern you want to match on. To add multiple, use a space seperated list.")
 	fmt.Println("TIP: If you are looking for a function, leave off the parenthesis -- unless you know the exact naming of the argument(s) it has been called with.")
 	fmt.Print("Add hit word: ")
-	var input string
-	fmt.Scanln(&input)
-	wordsToAdd := strings.Split(input, " ")
+    
+    scanner := bufio.NewScanner(os.Stdin)
+    scanner.Scan()
+    err := scanner.Err()
+    Check(err)
+
+	wordsToAdd := strings.Split(scanner.Text(), " ")
 	sc.addToField(wordsToAdd, &sc.HitWords)
 }
 
