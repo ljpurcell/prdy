@@ -5,7 +5,6 @@ import(
     "fmt"
     "strings"
     "os"
-    "strconv"
 )
 
 /*
@@ -27,7 +26,7 @@ func setUpConfigFile(sc *SearchConfig) {
     fmt.Println("Let's set one up now.")
     addHitWord(sc)
     addExcludedWord(sc)
-    addIgnoredFile(sc)
+    // addIgnoredFile(sc)
 }
 
 func displayConfigMenu(sc *SearchConfig) {
@@ -163,8 +162,6 @@ func displayCurrentConfig(sc *SearchConfig){
 
 
 func addHitWord(sc *SearchConfig) {
-	defer sc.updateConfigFile()
-
 	fmt.Println("\n\t* Add Hit Words *")
 	fmt.Println("\nPlease type the pattern you want to match on. To add multiple, use a space seperated list.")
 	fmt.Println("TIP: If you are looking for a function, leave off the parenthesis -- unless you know the exact naming of the argument(s) it has been called with.")
@@ -182,8 +179,6 @@ func addHitWord(sc *SearchConfig) {
 
 // Can be refactored, doesn't use sc.RemoveFromField method
 func removeHitWord(sc *SearchConfig) {
-    defer sc.updateConfigFile()
-
 	fmt.Println("\n\t* Remove Hit Word *")
 	fmt.Println("\nPlease type the number of the word you want to remove.")
 	fmt.Println("TIP: If you want to remove mutliple words, type a space seperated list.")
@@ -198,18 +193,7 @@ func removeHitWord(sc *SearchConfig) {
 
 	providedIndices := strings.Split(indicesToRemove, " ")
 
-	for i, indexString := range providedIndices {
-		indexString = strings.TrimSpace(indexString)
-		indexValue, err := strconv.ParseInt(indexString, 10, strconv.IntSize)
-		Check(err)
-
-		indexValue -= 1 + int64(i) // because menu is 1-based and indices become progressively off by one more each time around the loop as an item is removed
-		removedWord := sc.HitWords[indexValue]
-		copy(sc.HitWords[indexValue:], sc.HitWords[indexValue+1:])
-		sc.HitWords = sc.HitWords[:len(sc.HitWords)-1]
-
-		fmt.Printf("Removed %q\n", removedWord)
-	}
+    sc.removeFromField(providedIndices, &sc.ExcludedWords)
 }
 
 func runTool(sc *SearchConfig) {

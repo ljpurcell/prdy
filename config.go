@@ -47,16 +47,15 @@ func (sc *SearchConfig) removeFromField(indicesStr []string, field *[]string) ([
 }
 
 func (sc *SearchConfig) updateConfigFile() {
+    fmt.Println("> Saving...")
 	scJson, err := json.Marshal(*sc)
-	Check(err)
+    Check(err)
 	os.WriteFile(".prdy_config.json", scJson, 0644)
 }
 
 
 
 func addExcludedWord(sc *SearchConfig) {
-	// defer sc.updateConfigFile(sc)
-
 	fmt.Println("\n\t* Adding new Excluded Word *")
 	fmt.Println("\nPlease type the word or pattern you want to PREVENT matching on.")
 	fmt.Println("TIP: This is where you can use specific argument names to stop returning false positives.")
@@ -72,8 +71,6 @@ func addExcludedWord(sc *SearchConfig) {
 }
 
 func removeExcludedWord(sc *SearchConfig) {
-	// defer sc.updateConfigFile(sc)
-
 	fmt.Println("\n\t* Remove Hit Word *")
 	fmt.Println("\nPlease type the number of the word you want to remove.")
 	fmt.Println("TIP: If you want to remove mutliple words, type a space seperated list.")

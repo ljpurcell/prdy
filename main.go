@@ -3,8 +3,8 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"io/fs"
-    "fmt"
 	"os"
 )
 
@@ -38,13 +38,10 @@ func main() {
 
     // Load config
 
-
-
 //	if runTool {
 		// For getting the current working directory. Add basic utils.Checks and error handling if there isn't a .env file or app folder, ask the user if they are running it from the root
 		// pwd, err := os.Getwd()
 
-		Check(err)
 		// fsys := os.DirFS(pwd)
 		// patterns := getGitIgnorePatterns()
 
