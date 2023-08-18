@@ -26,8 +26,22 @@ func setUpConfigFile(sc *SearchConfig) {
 	fmt.Println("Let's set one up now.")
 	addHitWord(sc)
 	addExcludedWord(sc)
-	addSourceDirectory(sc) // Not implemented
 	addIgnoredFile(sc)
+}
+
+func checkIfUserWantsToRunTool() bool {
+	fmt.Println("\nGreat! You now have a config in place. Would you like to run the tool? Enter 'y' for yes, or anything else for no.")
+	fmt.Print("Run tool: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+
+	input := strings.ToLower(scanner.Text())
+
+	if strings.HasPrefix(input, "y") {
+		return true
+	} else {
+		return false
+	}
 }
 
 func displayConfigMenu(sc *SearchConfig) {
@@ -191,44 +205,44 @@ func addExcludedWord(sc *SearchConfig) {
 	sc.addToField(wordsToAdd, &sc.ExcludedWords)
 }
 
-func addSourceDirectory(sc *SearchConfig) {
-	// TODO
-}
-
-func addIgnoredFile(sc *SearchConfig) { // START
+func addIgnoredFile(sc *SearchConfig) {
 	_, err := os.Stat(".prdy_config.json")
 	userHasGitIgnoreFile := err == nil
 
 	if userHasGitIgnoreFile {
 		fmt.Println("\n\t* Add Ignored Files *")
 		fmt.Println("\nYou have a .gitignore file in this directory. Would you like to automatically import it?")
-		fmt.Println("This will prevent matching on anything withing your ignored files. Enter 'y' to import.")
+		fmt.Println("This will prevent matching on anything within your ignored files. Use 'y' to confirm or nothing to skip.")
 		fmt.Print("Import .gitignore file: ")
 
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Scan()
 		err = scanner.Err()
 		Check(err)
-		file, err := os.Open(".gitignore")
-		defer file.Close()
-		Check(err)
 
-		scanner := bufio.NewScanner(file)
-		scanner.Split(bufio.ScanLines)
+		input := strings.ToLower(scanner.Text())
 
-		var ignoredFiles []string
-		for scanner.Scan() {
-			if !strings.HasPrefix(scanner.Text(), "#") {
-				ignoredFiles = append(ignoredFiles, scanner.Text())
+		if strings.HasPrefix(input, "y") {
+
+			file, err := os.Open(".gitignore")
+			defer file.Close()
+			Check(err)
+
+			scanner = bufio.NewScanner(file)
+			scanner.Split(bufio.ScanLines)
+
+			var ignoredFiles []string
+			for scanner.Scan() {
+				if !strings.HasPrefix(scanner.Text(), "#") {
+					ignoredFiles = append(ignoredFiles, scanner.Text())
+				}
 			}
+
+			sc.addToField(ignoredFiles, &sc.IgnoredFiles)
 		}
-
-		sc.addToField(ignoredFiles, &sc.IgnoredFiles)
 	}
-
 }
 
-// Can be refactored, doesn't use sc.RemoveFromField method
 func removeHitWord(sc *SearchConfig) {
 	fmt.Println("\n\t* Remove Hit Word *")
 	fmt.Println("\nPlease type the number of the word you want to remove.")
@@ -249,6 +263,17 @@ func removeHitWord(sc *SearchConfig) {
 
 func runTool(sc *SearchConfig) {
 	fmt.Printf("Running with configuration: %v\n", sc)
+
+	pwd, err := os.Getwd()
+	fsys := os.DirFS(pwd)
+
+	file, err := fsys.Open("prdy_test_file.txt")
+	if err != nil {
+		fmt.Printf("Error in run tool: %v", err)
+	}
+
+	CheckFileForHits(file, sc) // START BY RUNNING TOOL AGAIN AND DEBUGGING THIS
+	fmt.Println("Done!")
 }
 
 func quitEverything() {

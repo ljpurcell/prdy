@@ -21,7 +21,8 @@ func CheckFileForHits(file fs.File, sc *SearchConfig) {
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if SliceElementIsSubstring(sc.HitWords, fileScanner.Text()) && SliceElementIsSubstring(sc.ExcludedWords, fileScanner.Text()) {
+		// Need to find a single hitword & find zero excluded versions
+		if foundMatch(sc.HitWords, fileScanner.Text()) && !foundMatch(sc.ExcludedWords, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}

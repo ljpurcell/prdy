@@ -29,7 +29,7 @@ func Check(err error) {
 	}
 }
 
-func SliceElementIsSubstring(needles []string, haystack string) bool {
+func foundMatch(needles []string, haystack string) bool {
 	for _, needle := range needles {
 		if strings.Contains(haystack, needle) {
 			return true
