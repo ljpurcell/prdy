@@ -1,4 +1,10 @@
-package tool
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"io/fs"
+)
 
 /*
  * PRIMARY FUNCTIONALITY
@@ -11,11 +17,11 @@ func CheckFileForHits(file fs.File, sc *SearchConfig) {
 	var outputArray []string
 
 	fileInfo, err := file.Stat()
-	utils.Check(err)
+	Check(err)
 	fileName := fileInfo.Name()
 
 	for i := 1; fileScanner.Scan(); i++ {
-		if utils.SliceElementIsSubstring(sc.HitWords, fileScanner.Text()) && utils.SliceElementIsSubstring(sc.ExcludedWords, fileScanner.Text()) {
+		if SliceElementIsSubstring(sc.HitWords, fileScanner.Text()) && SliceElementIsSubstring(sc.ExcludedWords, fileScanner.Text()) {
 			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}

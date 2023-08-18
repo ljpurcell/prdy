@@ -1,12 +1,11 @@
 package main
 
 import (
-    "strconv"
-    "strings"
-    "sort"
-    "io/fs"
+	"io/fs"
+	"sort"
+	"strconv"
+	"strings"
 )
-
 
 func ToIntSorted(input []string) []int {
 	var result []int
@@ -18,7 +17,6 @@ func ToIntSorted(input []string) []int {
 	sort.Ints(result)
 	return result
 }
-
 
 /*
  * ERROR HANDLING
@@ -47,7 +45,6 @@ func CloseFile(file fs.File) {
 	err := file.Close()
 	Check(err)
 }
-
 
 /*
  * GLOB MATCHING

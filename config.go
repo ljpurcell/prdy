@@ -1,12 +1,12 @@
 package main
 
 import (
-    "bufio"
-    "fmt"
-    "os"
-    "encoding/json"
-    "strings"
-    "strconv"
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
 )
 
 /**
@@ -18,7 +18,6 @@ type SearchConfig struct {
 	SourceDirectories []string
 	IgnoredFiles      []string
 }
-
 
 /**
  * METHODS
@@ -47,27 +46,9 @@ func (sc *SearchConfig) removeFromField(indicesStr []string, field *[]string) ([
 }
 
 func (sc *SearchConfig) updateConfigFile() {
-    fmt.Println("> Saving...")
 	scJson, err := json.Marshal(*sc)
-    Check(err)
+	Check(err)
 	os.WriteFile(".prdy_config.json", scJson, 0644)
-}
-
-
-
-func addExcludedWord(sc *SearchConfig) {
-	fmt.Println("\n\t* Adding new Excluded Word *")
-	fmt.Println("\nPlease type the word or pattern you want to PREVENT matching on.")
-	fmt.Println("TIP: This is where you can use specific argument names to stop returning false positives.")
-	fmt.Print("Add excluded word: ")
-
-    scanner := bufio.NewScanner(os.Stdin)
-    scanner.Scan()
-    err := scanner.Err()
-    Check(err)
-
-	wordsToAdd := strings.Split(scanner.Text(), " ")
-	sc.addToField(wordsToAdd, &sc.ExcludedWords)
 }
 
 func removeExcludedWord(sc *SearchConfig) {
@@ -98,11 +79,6 @@ func removeExcludedWord(sc *SearchConfig) {
 		fmt.Printf("Removed %q\n", removedWord)
 
 	}
-}
-
-func addIgnoredFile(sc *SearchConfig) {
-	// if ignored files in config is empty and there is a .gitignore in the current directory, ask if the user wants to add use that
-	// Look at using filepath.Match or fs.Glob. Also research hot .gitnore files work
 }
 
 func removeIgnoredFile(sc *SearchConfig) {
@@ -161,13 +137,13 @@ func loadConfig() *SearchConfig {
 	Check(err)
 	var sc SearchConfig
 	json.Unmarshal(configJson, &sc)
-    return &sc
+	return &sc
 }
 
 func createEmptyConfig() *SearchConfig {
-    sc := &SearchConfig{}
-    jsonSc, err := json.Marshal(sc)
-    Check(err)
+	sc := &SearchConfig{}
+	jsonSc, err := json.Marshal(sc)
+	Check(err)
 	os.WriteFile(".prdy_config.json", jsonSc, 0644)
-    return sc
+	return sc
 }
