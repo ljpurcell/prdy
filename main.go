@@ -49,20 +49,6 @@ func main() {
 	// files, err := fs.Glob(fsys, pattern)
 	// utils.Check(err)
 
-	// Loop over provided source code directories, passing each to walkdDir
-	// fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
-	//
-	// 	for _, pattern := range patterns {
-	// 		matched, err := filepath.Match(pattern, path)
-	// 		utils.Check(err)
-	//
-	// 		if matched {
-	// 			fmt.Printf("File %s matched for pattern %q\n", path, pattern)
-	// 		}
-	// 	}
-	// 	return nil
-	// })
-
 	// if errors array isn't empty, display lines for each file and prompt user if they want to run tests or abort to fix
 
 	// run tests if errors array is empty

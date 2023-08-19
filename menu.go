@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 )
@@ -265,14 +266,24 @@ func runTool(sc *SearchConfig) {
 	fmt.Printf("Running with configuration: %v\n", sc)
 
 	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("Error getting PWD in runTool: %v", err)
+	}
 	fsys := os.DirFS(pwd)
 
-	file, err := fsys.Open("prdy_test_file.txt")
-	if err != nil {
-		fmt.Printf("Error in run tool: %v", err)
-	}
+	// file, err := fsys.Open("prdy_test_file.txt")
+	//if err != nil {
+	// 	fmt.Printf("Error in run tool: %v", err)
+	// }
 
-	CheckFileForHits(file, sc) // START BY RUNNING TOOL AGAIN AND DEBUGGING THIS
+	fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
+		file, err := os.Open(path)
+		if err != nil {
+			fmt.Printf("Error opening file in runTool: %v", path)
+		}
+		CheckFileForHits(file, sc)
+		return nil
+	})
 	fmt.Println("Done!")
 }
 

@@ -23,7 +23,7 @@ func CheckFileForHits(file fs.File, sc *SearchConfig) {
 	for i := 1; fileScanner.Scan(); i++ {
 		// Need to find a single hitword & find zero excluded versions
 		if foundMatch(sc.HitWords, fileScanner.Text()) && !foundMatch(sc.ExcludedWords, fileScanner.Text()) {
-			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
+			line := fmt.Sprintf("line %v: %v\n", i, fileScanner.Text())
 			outputArray = append(outputArray, line)
 		}
 	}
@@ -32,7 +32,7 @@ func CheckFileForHits(file fs.File, sc *SearchConfig) {
 
 	for i, line := range outputArray {
 		if i == 0 {
-			fmt.Printf("\n\tFile: %s", fileName)
+			fmt.Printf("\n\tFile: %s\n", fileName)
 		}
 		fmt.Printf(line)
 	}
