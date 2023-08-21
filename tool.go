@@ -10,6 +10,7 @@ import (
  * PRIMARY FUNCTIONALITY
  */
 func CheckFileForHits(file fs.File, sc *SearchConfig) {
+
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 

@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"os"
 	"strings"
+
+	ignore "github.com/sabhiram/go-gitignore"
 )
 
 /*
@@ -266,24 +268,28 @@ func runTool(sc *SearchConfig) {
 	fmt.Printf("Running with configuration: %v\n", sc)
 
 	pwd, err := os.Getwd()
+
 	if err != nil {
 		fmt.Printf("Error getting PWD in runTool: %v", err)
 	}
+
 	fsys := os.DirFS(pwd)
 
-	// file, err := fsys.Open("prdy_test_file.txt")
-	//if err != nil {
-	// 	fmt.Printf("Error in run tool: %v", err)
-	// }
+	ignoreObject := ignore.CompileIgnoreLines(sc.IgnoredFiles...)
 
 	fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
-		file, err := os.Open(path)
-		if err != nil {
-			fmt.Printf("Error opening file in runTool: %v", path)
+
+		if !ignoreObject.MatchesPath(path) {
+			file, err := os.Open(path)
+			if err != nil {
+				fmt.Printf("Error opening file in runTool: %v", path)
+			}
+			CheckFileForHits(file, sc)
 		}
-		CheckFileForHits(file, sc)
+
 		return nil
 	})
+
 	fmt.Println("Done!")
 }
 
