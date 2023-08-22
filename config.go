@@ -17,6 +17,7 @@ type SearchConfig struct {
 	ExcludedWords     []string
 	SourceDirectories []string
 	IgnoredFiles      []string
+	RunTestsCommand   string
 }
 
 /**
@@ -49,6 +50,11 @@ func (sc *SearchConfig) updateConfigFile() {
 	scJson, err := json.Marshal(*sc)
 	Check(err)
 	os.WriteFile(".prdy_config.json", scJson, 0644)
+}
+
+func (sc *SearchConfig) addCommand(cmd string) {
+	defer sc.updateConfigFile()
+	sc.RunTestsCommand = cmd
 }
 
 func removeExcludedWord(sc *SearchConfig) {

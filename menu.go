@@ -30,6 +30,7 @@ func setUpConfigFile(sc *SearchConfig) {
 	addHitWord(sc)
 	addExcludedWord(sc)
 	addIgnoredFile(sc)
+	addRunTestsCommand(sc)
 }
 
 func checkIfUserWantsToRunTool() bool {
@@ -243,6 +244,23 @@ func addIgnoredFile(sc *SearchConfig) {
 
 			sc.addToField(ignoredFiles, &sc.IgnoredFiles)
 		}
+	}
+}
+
+func addRunTestsCommand(sc *SearchConfig) {
+	fmt.Println("\n\t* Add Command to Run Tests *")
+	fmt.Println("\nIf your project has a test suite, you can add the command here.")
+	fmt.Println("The test suite will be run automatically if no hit words are found, otherwise you will be asked.")
+	fmt.Print("Test suite command (press enter to skip): ")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+
+	err := scanner.Err()
+	if err != nil {
+		fmt.Printf("Error reading in test suit command in addRunTestsCommand: %v", err)
+	} else {
+		sc.addCommand(scanner.Text())
 	}
 }
 

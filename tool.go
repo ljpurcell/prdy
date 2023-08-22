@@ -31,7 +31,7 @@ func CheckFileForHits(file fs.File, sc *SearchConfig) {
 
 	outputMap[fileName] = outputArray
 
-	for i, line := range outputArray {
+	for i, line := range outputArray { // START - maybe refactor out into display function. Then work on UI improvements
 		if i == 0 {
 			fmt.Printf("\n\tFile: %s\n", fileName)
 		}
