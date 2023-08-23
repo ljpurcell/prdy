@@ -6,9 +6,38 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
+
+	"github.com/rivo/tview"
 )
 
+var app = tview.NewApplication()
+var pages = tview.NewPages()
+var configForm = tview.NewForm()
+
+func addConfigForm() {
+	cfg := SearchConfig{}
+
+	configForm.AddInputField("Hit Words", "", 20, nil, func(hw string) {
+		hwSlice := strings.Split(hw, " ")
+		cfg.HitWords = hwSlice
+	})
+
+	configForm.AddInputField("Excluded Words", "", 20, nil, func(ew string) {
+		ewSlice := strings.Split(ew, " ")
+		cfg.ExcludedWords = ewSlice
+	})
+
+	configForm.AddCheckbox("Import .gitignore file", false, func(importFile bool) {
+		if importFile {
+			getGitIgnorePatterns()
+		}
+	})
+}
+
 func main() {
+
+	pages.AddPage("Config Form", configForm, true, true)
 
 	/*
 	 * Workflow:
@@ -31,6 +60,13 @@ func main() {
 	wantsToRunTool := true
 
 	if !userHasConfigFile || *userIsConfiguring {
+
+		if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
+			panic(err)
+		}
+
+		pages.SwitchToPage("Config Form")
+
 		runConfigProcess(userHasConfigFile)
 		wantsToRunTool = checkIfUserWantsToRunTool()
 	}
