@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/rivo/tview"
 	ignore "github.com/sabhiram/go-gitignore"
 )
 
