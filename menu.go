@@ -17,8 +17,8 @@ import (
 func runConfigProcess(userHasConfigFile bool) {
 
 	if userHasConfigFile {
-		sc := loadConfig()
-		displayConfigMenu(sc)
+		//sc := loadConfig()
+		//displayConfigMenu(sc)
 	} else {
 		sc := createEmptyConfig()
 		setUpConfigFile(sc)
@@ -28,10 +28,35 @@ func runConfigProcess(userHasConfigFile bool) {
 func setUpConfigFile(sc *SearchConfig) {
 	fmt.Println("It appears you don't have a config file for this tool.")
 	fmt.Println("Let's set one up now.")
-	addHitWord(sc)
-	addExcludedWord(sc)
-	addIgnoredFile(sc)
-	addRunTestsCommand(sc)
+	// addHitWord(sc)
+	// addExcludedWord(sc)
+	// addIgnoredFile(sc)
+	// addRunTestsCommand(sc)
+}
+
+func createFirstConfigForm(sc *SearchConfig) *tview.Form {
+
+	defer sc.updateConfigFile()
+
+	form := tview.NewForm()
+
+	form.AddInputField("Hit Words", "", 20, nil, func(hw string) {
+		hwSlice := strings.Split(hw, " ")
+		sc.HitWords = hwSlice
+	})
+
+	form.AddInputField("Excluded Words", "", 20, nil, func(ew string) {
+		ewSlice := strings.Split(ew, " ")
+		sc.ExcludedWords = ewSlice
+	})
+
+	form.AddCheckbox("Import .gitignore file", false, func(importFile bool) {
+		if importFile {
+			getGitIgnorePatterns()
+		}
+	})
+
+	return form
 }
 
 func checkIfUserWantsToRunTool() bool {
@@ -49,37 +74,17 @@ func checkIfUserWantsToRunTool() bool {
 	}
 }
 
-func displayConfigMenu(sc *SearchConfig) {
-	fmt.Println("\n\t--- CONFIG MENU ---")
-	fmt.Println("What would you like to do?")
+func displayConfigMenu(app *tview.Application) {
+	configMenu := tview.NewList().AddItem("Add to field", "Add more hit words, excluded words, a source directory etc.", '1', nil).
+		AddItem("Remove from field", "Remove hit words, excluded words, a source directory etc.", '2', nil).
+		AddItem("View current config", "See the exact parameters the tool is using", '3', nil).
+		AddItem("Stop configuring & run tool", "Check your code using the current config", '4', nil).
+		AddItem("Quit", "Exit tool and return to terminal", 'q', func() {
+			app.Stop()
+		})
 
-	menuOptions := []string{
-		"1. Add to field",
-		"2. Remove from field",
-		"3. View your current configuration",
-		"4. Quit and run tool",
-		"5. Quit everything",
-	}
-
-	fmt.Print("\nType the corresponding number and press enter: ")
-	for _, v := range menuOptions {
-		fmt.Printf("\t %s\n", v)
-	}
-
-	menuSize := len(menuOptions)
-	userSelection := getUserSelection(menuSize)
-
-	switch *userSelection {
-	case 1:
-		displayAddToFieldOptions(sc)
-	case 2:
-		displayRemoveFromFieldOptions(sc)
-	case 3:
-		displayCurrentConfig(sc)
-	case 4:
-		runTool(sc)
-	case 5:
-		quitEverything()
+	if err := app.SetRoot(configMenu, true).SetFocus(configMenu).Run(); err != nil {
+		panic(err)
 	}
 }
 
@@ -106,7 +111,7 @@ func displayAddToFieldOptions(sc *SearchConfig) {
 
 	switch *userSelection {
 	case 1:
-		addHitWord(sc)
+		// addHitWord(sc)
 	case 2:
 		addExcludedWord(sc)
 	case 3:
@@ -180,19 +185,23 @@ func displayCurrentConfig(sc *SearchConfig) {
 	displayIgnoredFiles(sc, false)
 }
 
-func addHitWord(sc *SearchConfig) {
-	fmt.Println("\n\t* Add Hit Words *")
-	fmt.Println("\nPlease type the pattern you want to match on. To add multiple, use a space seperated list.")
-	fmt.Println("TIP: If you are looking for a function, leave off the parenthesis -- unless you know the exact naming of the argument(s) it has been called with.")
-	fmt.Print("Add hit word: ")
+func createAddHitWordForm(app *tview.Application, sc *SearchConfig) *tview.Form {
 
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	err := scanner.Err()
-	Check(err)
+	var hwString string
 
-	wordsToAdd := strings.Split(scanner.Text(), " ")
-	sc.addToField(wordsToAdd, &sc.HitWords)
+	form := tview.NewForm()
+	form.AddInputField("Hit word(s) to add", "", 20, nil, func(hw string) {
+		hwString = hw
+	})
+	form.AddButton("Save", func() {
+		wordsToAdd := strings.Split(hwString, " ")
+		sc.addToField(wordsToAdd, &sc.HitWords)
+		pages.SwitchToPage("Config Menu")
+	})
+
+	form.SetBorder(true).SetTitle("Add new Hit Word(s)").SetTitleAlign(tview.AlignLeft)
+
+	return form
 }
 
 func addExcludedWord(sc *SearchConfig) {

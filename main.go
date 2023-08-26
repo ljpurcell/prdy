@@ -6,38 +6,25 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"strings"
 
 	"github.com/rivo/tview"
 )
 
 var app = tview.NewApplication()
 var pages = tview.NewPages()
-var configForm = tview.NewForm()
-
-func addConfigForm() {
-	cfg := SearchConfig{}
-
-	configForm.AddInputField("Hit Words", "", 20, nil, func(hw string) {
-		hwSlice := strings.Split(hw, " ")
-		cfg.HitWords = hwSlice
-	})
-
-	configForm.AddInputField("Excluded Words", "", 20, nil, func(ew string) {
-		ewSlice := strings.Split(ew, " ")
-		cfg.ExcludedWords = ewSlice
-	})
-
-	configForm.AddCheckbox("Import .gitignore file", false, func(importFile bool) {
-		if importFile {
-			getGitIgnorePatterns()
-		}
-	})
-}
 
 func main() {
+	// If no config file, set up must be run
+	_, err := os.Stat(".prdy_config.json")
+	userHasConfigFile := err == nil
 
-	pages.AddPage("Config Form", configForm, true, true)
+	sc := SearchConfig{}
+
+	initConfigForm := createFirstConfigForm(&sc)
+	addHitWordForm := createAddHitWordForm(app, &sc)
+
+	pages.AddPage("Config Form", initConfigForm, true, true)
+	pages.AddPage("Add HitWord Form", addHitWordForm, true, true)
 
 	/*
 	 * Workflow:
@@ -54,26 +41,15 @@ func main() {
 	userIsConfiguring := flag.Bool("config", false, "Bool (default: false). Open the configuration menu instead of immediately running the tool.")
 	flag.Parse()
 
-	// If no config file, set up must be run
-	_, err := os.Stat(".prdy_config.json")
-	userHasConfigFile := err == nil
-	wantsToRunTool := true
-
 	if !userHasConfigFile || *userIsConfiguring {
-
-		if err := app.SetRoot(pages, true).EnableMouse(true).Run(); err != nil {
-			panic(err)
-		}
-
-		pages.SwitchToPage("Config Form")
-
-		runConfigProcess(userHasConfigFile)
-		wantsToRunTool = checkIfUserWantsToRunTool()
+		app.SetRoot(initConfigForm, true)
+	} else {
+		fmt.Println("end up here")
+		app.SetRoot(addHitWordForm, true)
 	}
 
-	if wantsToRunTool {
-		sc := loadConfig()
-		runTool(sc)
+	if err := app.EnableMouse(true).Run(); err != nil {
+		panic(err)
 	}
 
 	//	if runTool {
