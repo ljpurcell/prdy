@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
-	"io/fs"
 	"os"
 
 	"github.com/rivo/tview"
@@ -72,29 +70,3 @@ func main() {
 // Options for optimising: pointers, replacements for concatenation, reuse variables
 // google other options 'https://golangdocs.com/techniques-to-maximize-your-go-applications-performance'
 // BENCHMARK first so that have something to write about
-
-func ReadAndPrintFileByLine(file fs.File, sc *SearchConfig) {
-	fileScanner := bufio.NewScanner(file)
-	fileScanner.Split(bufio.ScanLines)
-
-	var outputMap = make(map[string][]string)
-	var outputArray []string
-
-	fileInfo, err := file.Stat()
-	Check(err)
-	fileName := fileInfo.Name()
-
-	for i := 1; fileScanner.Scan(); i++ {
-		if foundMatch(sc.HitWords, fileScanner.Text()) && !foundMatch(sc.ExcludedWords, fileScanner.Text()) {
-			line := fmt.Sprintf("%v %v\n", i, fileScanner.Text())
-			outputArray = append(outputArray, line)
-		}
-	}
-
-	outputMap[fileName] = outputArray
-
-	for _, line := range outputMap[fileName] {
-		fmt.Printf(line)
-	}
-
-}

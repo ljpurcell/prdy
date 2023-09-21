@@ -9,13 +9,12 @@ import (
 /*
  * PRIMARY FUNCTIONALITY
  */
-func CheckFileForHits(file fs.File, sc *SearchConfig) {
+func CheckFileForHits(file fs.File, m map[string][]string, sc *SearchConfig) map[string][]string {
 
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
-	var outputMap = make(map[string][]string)
-	var outputArray []string
+	var hitLines []string
 
 	fileInfo, err := file.Stat()
 	Check(err)
@@ -25,17 +24,24 @@ func CheckFileForHits(file fs.File, sc *SearchConfig) {
 		// Need to find a single hitword & find zero excluded versions
 		if foundMatch(sc.HitWords, fileScanner.Text()) && !foundMatch(sc.ExcludedWords, fileScanner.Text()) {
 			line := fmt.Sprintf("line %v: %v\n", i, fileScanner.Text())
-			outputArray = append(outputArray, line)
+			hitLines = append(hitLines, line)
 		}
 	}
 
-	outputMap[fileName] = outputArray
+	m[fileName] = hitLines
 
-	for i, line := range outputArray { // START - maybe refactor out into display function. Then work on UI improvements
-		if i == 0 {
-			fmt.Printf("\n\tFile: %s\n", fileName)
+	return m
+}
+
+func DisplayHitsForEachFile(m map[string][]string) {
+
+	for file := range m {
+
+		fmt.Printf("\n\tFile: %v\n", file)
+
+		for line := range m[file] {
+
+			fmt.Printf("%v\n", line)
 		}
-		fmt.Printf(line)
 	}
-
 }

@@ -304,6 +304,7 @@ func runTool(sc *SearchConfig) {
 	fsys := os.DirFS(pwd)
 
 	ignoreObject := ignore.CompileIgnoreLines(sc.IgnoredFiles...)
+	var resultsMap = make(map[string][]string)
 
 	fs.WalkDir(fsys, ".", func(path string, directory fs.DirEntry, err error) error {
 
@@ -312,11 +313,13 @@ func runTool(sc *SearchConfig) {
 			if err != nil {
 				fmt.Printf("Error opening file in runTool: %v", path)
 			}
-			CheckFileForHits(file, sc)
+			resultsMap = CheckFileForHits(file, resultsMap, sc)
 		}
 
 		return nil
 	})
+
+    DisplayHitsForEachFile(resultsMap)
 
 	fmt.Println("Done!")
 }
